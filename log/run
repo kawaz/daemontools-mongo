@@ -1,0 +1,4 @@
+#!/bin/sh
+user="nobody"
+chown "$user" .
+exec setuidgid "$user" multilog t "`pwd`/main"

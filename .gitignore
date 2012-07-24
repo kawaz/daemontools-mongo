@@ -1,0 +1,6 @@
+supervise
+!log/run
+log/*
+
+configdb
+memo

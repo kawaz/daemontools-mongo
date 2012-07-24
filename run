@@ -1,0 +1,57 @@
+#!/bin/bash
+cd "`dirname "$0"`" || exit 1
+
+user="mongod"
+port="27017"
+cmd=()
+
+function setup_mongos() {
+  # build cmd
+  configdb="`cat configdb`"
+  cmd=(mongos --configdb "$configdb")
+}
+
+function setup_mongod() {
+  test -d data || install -o mongod -d data
+  # check repair
+  if tail -n15 log/main/current | grep -q "recommend removing file and running --repair"; then
+    svc -d .
+    while svstat . | egrep -v ": down .*normally up"; do sleep 0.3; done
+    rm -f data/mongod.lock
+    setuidgid "$user" env - mongod --dbpath data --repair 2>&1
+    svc -u .
+    exit
+  fi
+  # build cmd
+  cmd=(mongod --dbpath data --rest)
+  if [[ "$PWD" =~ -repl[a-zA-Z0-9]+ ]]; then
+    rsname="${PWD#*-repl}"; rsname="${rsname%%[^a-zA-Z0-9]*}"
+    cmd=("${cmd[@]}" --replSet "$rsname")
+    if pwd | grep -q -- "-abiter"; then
+      cmd=("${cmd[@]}" --nojournal)
+    else
+      #メモリ足りない場合はoplogを小さくする
+      #8GBメモリで5000だと死ぬ4000だと2個めで死ぬ1000だと4個目で死ぬ500だと6個目で死ぬ(起動するだけで)
+      oplogSize="100"
+      cmd=("${cmd[@]}" --oplogSize "$oplogSize")
+    fi
+  fi
+  if [[ "$PWD" =~ -shard ]]; then
+    cmd=("${cmd[@]}" --shardsvr)
+  fi
+  if [[ "$PWD" =~ -config ]]; then
+    cmd=("${cmd[@]}" --configsvr)
+  fi
+}
+
+if [[ "$PWD" =~ -mongos$ ]]; then
+  setup_mongos
+else
+  setup_mongod
+fi
+if [[ "$PWD" =~ -[0-9]+$ ]]; then
+  port="${PWD##*-}"
+fi
+cmd=("${cmd[@]}" --nounixsocket --port $port)
+
+exec setuidgid "$user" env - "${cmd[@]}" 2>&1

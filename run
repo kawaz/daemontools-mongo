@@ -27,7 +27,7 @@ function setup_mongod() {
   if [[ "$PWD" =~ -repl[a-zA-Z0-9]+ ]]; then
     rsname="${PWD#*-repl}"; rsname="${rsname%%[^a-zA-Z0-9]*}"
     cmd=("${cmd[@]}" --replSet "$rsname")
-    if pwd | grep -q -- "-abiter"; then
+    if pwd | grep -q -- "-arbiter"; then
       cmd=("${cmd[@]}" --nojournal)
     else
       #メモリ足りない場合はoplogを小さくする

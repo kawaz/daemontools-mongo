@@ -49,8 +49,8 @@ if [[ "$PWD" =~ -mongos$ ]]; then
 else
   setup_mongod
 fi
-if [[ "$PWD" =~ -[0-9]+$ ]]; then
-  port="${PWD##*-}"
+if [[ "$PWD" =~ -[0-9]+(-|$) ]]; then
+  port="`pwd | perl -pe's/.*-([0-9]+)(-|$).*/$1/'`"
 fi
 cmd=("${cmd[@]}" --nounixsocket --port $port)
 
